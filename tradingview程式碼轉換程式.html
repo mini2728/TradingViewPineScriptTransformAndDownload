@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView Script Transformer</title>
+    <script>
+        function transformAndDownload() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                alert('請選擇一個文件進行轉換。');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const originalText = e.target.result;
+                    const transformedText = transformPineScript(originalText);
+                    
+                    // 創建一個新的 Blob 包含轉換後的文本
+                    const blob = new Blob([transformedText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+
+                    // 程式化創建一個下載鏈接並點擊它
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    // 使用原始文件名，添加 'transformedPineScript' 前缀
+                    const originalFileName = file.name;
+                    const newFileName = 'transformed_' + originalFileName;
+                    downloadLink.download = newFileName;  // 设置新的文件名为下载名称
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                } catch (error) {
+                    alert('轉換過程中發生錯誤：' + error.message);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function transformPineScript(data) {
+            const initialization = "\nvar seqNum = 0 // Initialize the sequence number\n" +
+                           "addArrayData(value) => \n" +
+                           "    alert_array = array.new_string()\n" +
+                           "    array.push(alert_array, '\"seqNum\": ' + str.tostring(value))\n" +
+                           "    alertstring = '{' + array.join(alert_array, ', ') + '}'\n";
+
+            // 正则表达式匹配 strategy 函数及其后的代码块，直到下一个 @version 或文件末尾
+            // const regexPattern = /(@version=\d+\s*\nstrategy\("([^"]*)"[^\n]*\)[\s\S]*?)(?=\/\/@version|\Z)/g;
+            const regexPattern = /(@version=\d+\s*\nstrategy\("([^"]*)"[^\n]*\)[\s\S]*)/;
+
+            let transformedData = data.replace(regexPattern, (match) => {
+                // 检查匹配的策略块是否已包含初始化代码
+                if (!match.includes('var seqNum = 0 // Initialize the sequence number')) {
+                    // 找到策略声明后第一行适当位置插入初始化代码
+                    const endOfStrategyDeclaration = match.indexOf(')', match.indexOf('strategy(')) + 1;
+                    const partBeforeInitialization = match.substring(0, endOfStrategyDeclaration);
+                    const partAfterInitialization = match.substring(endOfStrategyDeclaration);
+
+                    return partBeforeInitialization + initialization + partAfterInitialization;
+                }
+                return match; // 如果已包含，不做更改
+            });
+
+            const regexPattern1 = /( *)(strategy\.(entry|close|exit)\("([^"]+)", [^\n]+)\n/g;
+            transformedData = transformedData.replace(regexPattern1, (match, indentation, strategyCall) => {
+                console.log();
+                // 获取当前匹配前的所有文本并拆分成行
+                const lines = transformedData.substring(0, transformedData.indexOf(match)).split('\n');
+                const lastLine = lines[lines.length - 2].trim();  // 获取最后一行前一行
+
+                // 检查前一行是否已经是 'seqNum += 1'
+                if (lastLine === "seqNum += 1") {
+                    return match;  // 如果已经添加了 'seqNum += 1'，直接返回原匹配内容
+                }
+
+                // 否则，添加 'seqNum += 1' 并保持原有缩进
+                return `${indentation}seqNum += 1\n${match}`;
+            });
+
+            // Now check and add alert message if not present
+            const regexPattern2 = /strategy\.(entry|close|exit)\("([^"]+)", ([^\)]+)\)/g;
+            transformedData = transformedData.replace(regexPattern2, (match, method, label, params) => {
+                if (match.includes('alert_message=addArrayData')) {
+                    return match;
+                }
+                return `strategy.${method}("${label}", ${params}, alert_message=addArrayData(seqNum))`;
+            });
+
+
+            return transformedData;
+        }
+    </script>
+</head>
+<body>
+    <h1>TradingView Pine Script 轉換器</h1>
+    <input type="file" id="fileInput" accept=".txt">
+    <button onclick="transformAndDownload()">轉換並下載</button>
+</body>
+</html>
