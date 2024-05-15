@@ -4,9 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradingView Script Transformer</title>
+    <style>
+        .container{
+            width: auto;
+            text-align: center;
+            padding: 30px;
+        }
+        .file-input-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            right: 0;
+            top: 0;
+            cursor: pointer;
+        }
+
+        .custom-button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .custom-button:hover {
+            background-color: #0056b3;
+        }
+
+        .code-container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .code-box {
+            width: 48%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+
+        .added-content {
+            color: red;
+            white-space: pre-wrap; /* 保持換行 */
+        }
+    </style>
     <script>
         function transformAndDownload() {
             const fileInput = document.getElementById('fileInput');
+            const originalCodeContainer = document.getElementById('originalCode');
+            const transformedCodeContainer = document.getElementById('transformedCode');
+
+            originalCodeContainer.textContent = '';
+            transformedCodeContainer.textContent = '';
+
             if (fileInput.files.length === 0) {
                 alert('請選擇一個文件進行轉換。');
                 return;
@@ -18,10 +76,13 @@
             reader.onload = function(e) {
                 try {
                     const originalText = e.target.result;
-                    const transformedText = transformPineScript(originalText);
-                    
+                    originalCodeContainer.textContent = originalText;
+
+                    const transformedData = transformPineScript(originalText);
+                    transformedCodeContainer.innerHTML = transformedData;
+
                     // 創建一個新的 Blob 包含轉換後的文本
-                    const blob = new Blob([transformedText], { type: 'text/plain' });
+                    const blob = new Blob([transformedData], { type: 'text/plain' });
                     const url = URL.createObjectURL(blob);
 
                     // 程式化創建一個下載鏈接並點擊它
@@ -49,8 +110,7 @@
                            "    array.push(alert_array, '\"seqNum\": ' + str.tostring(value))\n" +
                            "    alertstring = '{' + array.join(alert_array, ', ') + '}'\n";
 
-            // 正则表达式匹配 strategy 函数及其后的代码块，直到下一个 @version 或文件末尾
-            // const regexPattern = /(@version=\d+\s*\nstrategy\("([^"]*)"[^\n]*\)[\s\S]*?)(?=\/\/@version|\Z)/g;
+            // 正则表达式匹配 strategy 函数及其后的代码块，直到文件末尾
             const regexPattern = /(@version=\d+\s*\nstrategy\("([^"]*)"[^\n]*\)[\s\S]*)/;
 
             let transformedData = data.replace(regexPattern, (match) => {
@@ -61,14 +121,13 @@
                     const partBeforeInitialization = match.substring(0, endOfStrategyDeclaration);
                     const partAfterInitialization = match.substring(endOfStrategyDeclaration);
 
-                    return partBeforeInitialization + initialization + partAfterInitialization;
+                    return partBeforeInitialization + '<span class="added-content">' + initialization + '</span>' + partAfterInitialization;
                 }
                 return match; // 如果已包含，不做更改
             });
 
             const regexPattern1 = /( *)(strategy\.(entry|close|exit)\("([^"]+)", [^\n]+)\n/g;
             transformedData = transformedData.replace(regexPattern1, (match, indentation, strategyCall) => {
-                console.log();
                 // 获取当前匹配前的所有文本并拆分成行
                 const lines = transformedData.substring(0, transformedData.indexOf(match)).split('\n');
                 const lastLine = lines[lines.length - 2].trim();  // 获取最后一行前一行
@@ -78,27 +137,51 @@
                     return match;  // 如果已经添加了 'seqNum += 1'，直接返回原匹配内容
                 }
 
-                // 否则，添加 'seqNum += 1' 并保持原有缩进
-                return `${indentation}seqNum += 1\n${match}`;
+                return `${indentation}<span class="added-content">seqNum += 1\n</span>${match}`; // 否则，添加 'seqNum += 1' 并保持原有缩进
             });
 
             // Now check and add alert message if not present
             const regexPattern2 = /strategy\.(entry|close|exit)\("([^"]+)", ([^\)]+)\)/g;
             transformedData = transformedData.replace(regexPattern2, (match, method, label, params) => {
-                if (match.includes('alert_message=addArrayData')) {
-                    return match;
+                if (!match.includes('alert_message=addArrayData')) {
+                    return `strategy.${method}("${label}", ${params}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`;
                 }
-                return `strategy.${method}("${label}", ${params}, alert_message=addArrayData(seqNum))`;
+                return match;
             });
-
 
             return transformedData;
         }
     </script>
 </head>
 <body>
-    <h1>TradingView Pine Script 轉換器 version: 24-05-15-01</h1>
-    <input type="file" id="fileInput" accept=".txt">
-    <button onclick="transformAndDownload()">轉換並下載</button>
+    <div class="container">
+        <h1>TradingView Pine Script 轉換器</h1>
+        <div>
+            操作說明:
+            <br>
+            請按「選擇文件」上傳 TradingView Pine Script程式碼檔案(只支援TXT檔)，
+            <br>
+            會自動補上需要的程式碼，
+            <br>
+            並自動下載成 transformed_xxxxx.txt 文件，
+            <br>
+            會在下方顯示調整前後的程式碼。
+        </div>
+        <h4>ver: 24.05.15.01</h4>
+        <div class="file-input-container">
+            <button class="custom-button" onclick="document.getElementById('fileInput').click()">選擇文件</button>
+            <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="transformAndDownload()">
+        </div>
+    </div>
+    <div class="code-container">
+        <div class="code-box">
+            <h3>原始策略程式碼</h3>
+            <pre id="originalCode"></pre>
+        </div>
+        <div class="code-box">
+            <h3>調整後策略程式碼</h3>
+            <pre id="transformedCode"></pre>
+        </div>
+    </div>
 </body>
 </html>
