@@ -104,6 +104,15 @@
             reader.readAsText(file);
         }
 
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         function transformPineScript(data) {
             const initialization = "\nvar seqNum = 0 // Initialize the sequence number\n" +
                            "addArrayData(value) => \n" +
@@ -111,7 +120,7 @@
                            "    array.push(alert_array, '\"seqNum\": ' + str.tostring(value))\n" +
                            "    alertstring = '{' + array.join(alert_array, ', ') + '}'\n";
 
-            let displayData = data; // 用于显示的带有 <span> 标签的版本
+            let displayData = escapeHtml(data); // 用于显示的带有 <span> 标签的版本
             let transformedData = data; // 用于下载的纯文本版本
 
             // 正则表达式匹配 strategy 函数及其后的代码块，直到文件末尾
@@ -126,7 +135,7 @@
                     const partAfterInitialization = match.substring(endOfStrategyDeclaration);
 
                     // 替换显示用的版本
-                    displayData = displayData.replace(match, partBeforeInitialization + '<span class="added-content">' + initialization + '</span>' + partAfterInitialization);
+                    displayData = displayData.replace(escapeHtml(match), escapeHtml(partBeforeInitialization) + '<span class="added-content">' + escapeHtml(initialization) + '</span>' + escapeHtml(partAfterInitialization));
                     // 替换下载用的版本
                     return partBeforeInitialization + initialization + partAfterInitialization;
                 }
@@ -145,7 +154,7 @@
                 }
 
                 // 替换显示用的版本
-                displayData = displayData.replace(match, `${indentation}<span class="added-content">seqNum += 1\n</span>${match}`);
+                displayData = displayData.replace(escapeHtml(match), `${escapeHtml(indentation)}<span class="added-content">seqNum += 1\n</span>${escapeHtml(match)}`);
                 // 替换下载用的版本
                 return `${indentation}seqNum += 1\n${match}`; // 否则，添加 'seqNum += 1' 并保持原有缩进
             });
@@ -155,7 +164,7 @@
             transformedData = transformedData.replace(regexPattern2, (match, method, label, params) => {
                 if (!match.includes('alert_message=addArrayData')) {
                     // 替换显示用的版本
-                    displayData = displayData.replace(match, `strategy.${method}("${label}", ${params}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`);
+                    displayData = displayData.replace(escapeHtml(match), `strategy.${method}("${escapeHtml(label)}", ${escapeHtml(params)}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`);
                     // 替换下载用的版本
                     return `strategy.${method}("${label}", ${params}, alert_message=addArrayData(seqNum))`;
                 }
