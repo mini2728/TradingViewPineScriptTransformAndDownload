@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradingView Script Transformer</title>
     <style>
-        .container{
+        .container {
             width: auto;
             text-align: center;
             padding: 30px;
@@ -42,6 +42,7 @@
         .code-container {
             display: flex;
             justify-content: space-between;
+            padding: 30px;
         }
 
         .code-box {
@@ -63,7 +64,7 @@
             const transformedCodeContainer = document.getElementById('transformedCode');
 
             originalCodeContainer.textContent = '';
-            transformedCodeContainer.textContent = '';
+            transformedCodeContainer.innerHTML = '';
 
             if (fileInput.files.length === 0) {
                 alert('請選擇一個文件進行轉換。');
@@ -78,8 +79,8 @@
                     const originalText = e.target.result;
                     originalCodeContainer.textContent = originalText;
 
-                    const transformedData = transformPineScript(originalText);
-                    transformedCodeContainer.innerHTML = transformedData;
+                    const [transformedData, displayData] = transformPineScript(originalText);
+                    transformedCodeContainer.innerHTML = displayData;
 
                     // 創建一個新的 Blob 包含轉換後的文本
                     const blob = new Blob([transformedData], { type: 'text/plain' });
@@ -110,10 +111,13 @@
                            "    array.push(alert_array, '\"seqNum\": ' + str.tostring(value))\n" +
                            "    alertstring = '{' + array.join(alert_array, ', ') + '}'\n";
 
+            let displayData = data; // 用于显示的带有 <span> 标签的版本
+            let transformedData = data; // 用于下载的纯文本版本
+
             // 正则表达式匹配 strategy 函数及其后的代码块，直到文件末尾
             const regexPattern = /(@version=\d+\s*\nstrategy\("([^"]*)"[^\n]*\)[\s\S]*)/;
 
-            let transformedData = data.replace(regexPattern, (match) => {
+            transformedData = transformedData.replace(regexPattern, (match) => {
                 // 检查匹配的策略块是否已包含初始化代码
                 if (!match.includes('var seqNum = 0 // Initialize the sequence number')) {
                     // 找到策略声明后第一行适当位置插入初始化代码
@@ -121,7 +125,10 @@
                     const partBeforeInitialization = match.substring(0, endOfStrategyDeclaration);
                     const partAfterInitialization = match.substring(endOfStrategyDeclaration);
 
-                    return partBeforeInitialization + '<span class="added-content">' + initialization + '</span>' + partAfterInitialization;
+                    // 替换显示用的版本
+                    displayData = displayData.replace(match, partBeforeInitialization + '<span class="added-content">' + initialization + '</span>' + partAfterInitialization);
+                    // 替换下载用的版本
+                    return partBeforeInitialization + initialization + partAfterInitialization;
                 }
                 return match; // 如果已包含，不做更改
             });
@@ -137,19 +144,25 @@
                     return match;  // 如果已经添加了 'seqNum += 1'，直接返回原匹配内容
                 }
 
-                return `${indentation}<span class="added-content">seqNum += 1\n</span>${match}`; // 否则，添加 'seqNum += 1' 并保持原有缩进
+                // 替换显示用的版本
+                displayData = displayData.replace(match, `${indentation}<span class="added-content">seqNum += 1\n</span>${match}`);
+                // 替换下载用的版本
+                return `${indentation}seqNum += 1\n${match}`; // 否则，添加 'seqNum += 1' 并保持原有缩进
             });
 
             // Now check and add alert message if not present
             const regexPattern2 = /strategy\.(entry|close|exit)\("([^"]+)", ([^\)]+)\)/g;
             transformedData = transformedData.replace(regexPattern2, (match, method, label, params) => {
                 if (!match.includes('alert_message=addArrayData')) {
-                    return `strategy.${method}("${label}", ${params}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`;
+                    // 替换显示用的版本
+                    displayData = displayData.replace(match, `strategy.${method}("${label}", ${params}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`);
+                    // 替换下载用的版本
+                    return `strategy.${method}("${label}", ${params}, alert_message=addArrayData(seqNum))`;
                 }
                 return match;
             });
 
-            return transformedData;
+            return [transformedData, displayData];
         }
     </script>
 </head>
@@ -159,7 +172,7 @@
         <div>
             操作說明:
             <br>
-            請按「選擇文件」上傳 TradingView Pine Script程式碼檔案(只支援TXT檔)，
+            請按「選擇文件」上傳 TradingView Pine Script 程式碼檔案(只支援 TXT 檔)，
             <br>
             會自動補上需要的程式碼，
             <br>
@@ -167,7 +180,7 @@
             <br>
             會在下方顯示調整前後的程式碼。
         </div>
-        <h4>ver: 24.05.15.01</h4>
+        <h4>ver: 24.05.15.02</h4>
         <div class="file-input-container">
             <button class="custom-button" onclick="document.getElementById('fileInput').click()">選擇文件</button>
             <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="transformAndDownload()">
