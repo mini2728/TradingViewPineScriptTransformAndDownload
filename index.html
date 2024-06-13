@@ -160,16 +160,20 @@
             });
 
             // Now check and add alert message if not present
-            const regexPattern2 = /strategy\.(entry|close|exit)\("([^"]+)", ([^\)]+)\)/g;
+            const regexPattern2 = /strategy\.(entry|close|exit)\("([^"]+)", ([^\)]*?\([^)]*\)[^\)]*?|[^\)]+)\)/g;
             transformedData = transformedData.replace(regexPattern2, (match, method, label, params) => {
-                if (!match.includes('alert_message=addArrayData')) {
-                    // 替换显示用的版本
+                console.log('params', params);
+                // 檢查 params 中是否已經包含 alert_message
+                if (!params.includes('alert_message=addArrayData')) {
+                    // 替換顯示用的版本
                     displayData = displayData.replace(escapeHtml(match), `strategy.${method}("${escapeHtml(label)}", ${escapeHtml(params)}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`);
-                    // 替换下载用的版本
+                    // 替換下載用的版本
                     return `strategy.${method}("${label}", ${params}, alert_message=addArrayData(seqNum))`;
                 }
                 return match;
             });
+
+
 
             return [transformedData, displayData];
         }
@@ -189,7 +193,7 @@
             <br>
             並在下方顯示調整前後的程式碼。
         </div>
-        <h4>ver: 24.05.16.01</h4>
+        <h4>ver: 24.06.13.01</h4>
         <div class="file-input-container">
             <button class="custom-button" onclick="document.getElementById('fileInput').click()">選擇文件</button>
             <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="transformAndDownload()">
