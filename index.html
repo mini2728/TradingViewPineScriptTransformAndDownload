@@ -1,213 +1,487 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradingView Script Transformer</title>
-    <style>
-        .container {
-            width: auto;
-            text-align: center;
-            padding: 30px;
-        }
-        .file-input-container {
-            position: relative;
-            display: inline-block;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradingView Script Transformer</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#111a2e;
+      --card:#0f1730;
+      --muted:#a9b4d0;
+      --text:#e9eefc;
+      --border:rgba(255,255,255,.10);
+      --accent:#4c8dff;
+      --accent2:#22c55e;
+      --danger:#ff5c77;
+      --codebg:#0b1022;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:14px;
+    }
 
-        .file-input {
-            position: absolute;
-            opacity: 0;
-            right: 0;
-            top: 0;
-            cursor: pointer;
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, "Noto Sans TC", sans-serif;
+      background: radial-gradient(1200px 600px at 50% -100px, rgba(76,141,255,.35), transparent 60%),
+                  linear-gradient(180deg, #070b14, var(--bg));
+      color:var(--text);
+    }
+
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:28px 18px 36px;
+    }
+
+    .header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .title h1{
+      margin:0;
+      font-size:26px;
+      letter-spacing:.5px;
+    }
+    .title .sub{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      font-size:12px;
+      color:var(--muted);
+      height:fit-content;
+      white-space:nowrap;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:999px;background:var(--accent2);
+      box-shadow:0 0 0 4px rgba(34,197,94,.12);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:14px;
+      margin-bottom:14px;
+    }
+    @media (max-width: 960px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card-h{
+      padding:14px 14px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .card-h h3{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.3px;
+      color:#dbe5ff;
+    }
+    .card-b{
+      padding:14px;
+    }
+
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      transition:.15s ease;
+      user-select:none;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(76,141,255,.55); background: rgba(76,141,255,.14); }
+    .btn.primary{ background: rgba(76,141,255,.18); border-color: rgba(76,141,255,.55); }
+    .btn.primary:hover{ background: rgba(76,141,255,.26); }
+    .btn.ghost{ background:transparent; }
+    .btn:active{ transform: translateY(0); }
+
+    .file{
+      display:none;
+    }
+
+    .status{
+      color:var(--muted);
+      font-size:12px;
+    }
+    .status strong{ color:#e9eefc; }
+
+    .code-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 960px){
+      .code-grid{ grid-template-columns: 1fr; }
+    }
+
+    pre{
+      margin:0;
+      padding:14px;
+      background: linear-gradient(180deg, rgba(11,16,34,.95), rgba(11,16,34,.75));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      overflow:auto;
+      max-height: 66vh;
+      font-size:12.5px;
+      line-height:1.55;
+    }
+
+    .added-content{
+      color: var(--danger);
+      white-space: pre-wrap;
+      font-weight:700;
+    }
+
+    .mini-actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .mini{
+      padding:8px 10px;
+      font-size:12px;
+      border-radius:10px;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(17,26,46,.95);
+      border:1px solid rgba(255,255,255,.14);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:999px;
+      box-shadow:var(--shadow);
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition:.18s ease;
+    }
+    .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
+    code.k{
+      color:#cfe0ff;
+    }
+  </style>
+
+  <script>
+    function showToast(msg){
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => t.classList.remove('show'), 1300);
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        showToast('已複製到剪貼簿');
+      }catch(e){
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('已複製到剪貼簿');
+      }
+    }
+
+    function copyFromPre(preId){
+      const el = document.getElementById(preId);
+      copyText(el.textContent);
+    }
+
+    function pickFile(){
+      document.getElementById('fileInput').click();
+    }
+
+    function clearAll(){
+      document.getElementById('originalCode').textContent = '';
+      document.getElementById('transformedCode').innerHTML = '';
+      document.getElementById('fileName').textContent = '尚未選擇檔案';
+      document.getElementById('resultHint').innerHTML = '等待檔案…';
+      showToast('已清空');
+    }
+
+    function transformAndDownload() {
+      const fileInput = document.getElementById('fileInput');
+      const originalCodeContainer = document.getElementById('originalCode');
+      const transformedCodeContainer = document.getElementById('transformedCode');
+
+      originalCodeContainer.textContent = '';
+      transformedCodeContainer.innerHTML = '';
+
+      if (fileInput.files.length === 0) {
+        showToast('請選擇 .txt 檔');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('resultHint').innerHTML = '轉換中…';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const originalText = e.target.result;
+          originalCodeContainer.textContent = originalText;
+
+          const [transformedData, displayData] = transformPineScript(originalText);
+          transformedCodeContainer.innerHTML = displayData;
+
+          // 下載
+          const blob = new Blob([transformedData], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+
+          const downloadLink = document.createElement('a');
+          downloadLink.href = url;
+          const newFileName = 'transformed_' + file.name;
+          downloadLink.download = newFileName;
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+
+          document.getElementById('resultHint').innerHTML =
+            `完成：已下載 <strong>${newFileName}</strong>`;
+
+          showToast('轉換完成並已下載');
+        } catch (error) {
+          document.getElementById('resultHint').innerHTML = '轉換失敗';
+          alert('轉換過程中發生錯誤：' + error.message);
         }
+      };
 
-        .custom-button {
-            display: inline-block;
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            color: #fff;
-            background-color: #007bff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // 你的 transformPineScript：保留原本邏輯（顯示與下載一致版本）
+    function transformPineScript(data) {
+      const NL = data.includes('\r\n') ? '\r\n' : '\n';
+      const lines = data.replace(/\r\n/g, '\n').split('\n');
+
+      const initLines = [
+        'var seqNum = 0 // Initialize the sequence number',
+        'addArrayData(value) => ',
+        '    alert_array = array.new_string()',
+        '    array.push(alert_array, \'"seqNum": \' + str.tostring(value))',
+        '    alertstring = \'{\' + array.join(alert_array, \', \') + \'}\''
+      ];
+
+      const hasInitAlready = lines.some(l => l.includes('var seqNum = 0 // Initialize the sequence number'));
+
+      const transformed = [];
+      const display = [];
+      const esc = escapeHtml;
+
+      function pushLine(rawLine, isAdded = false) {
+        transformed.push(rawLine);
+        display.push(isAdded ? `<span class="added-content">${esc(rawLine)}</span>` : esc(rawLine));
+      }
+
+      function isTradeCallLine(line) {
+        return /strategy\.(entry|close|exit)\(/.test(line);
+      }
+
+      // 1) 插入初始化：放在第一個 strategy(...) 之後
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        pushLine(line, false);
+
+        if (!hasInitAlready && /(^|\s)strategy\([^\n]*\)\s*$/.test(line)) {
+          pushLine('', true);
+          for (const il of initLines) pushLine(il, true);
+          pushLine('', true);
         }
+      }
 
-        .custom-button:hover {
-            background-color: #0056b3;
-        }
+      // 2) 第二階段：在每個 trade call 前加 seqNum += 1、並補 alert_message
+      const finalTransformed = [];
+      const finalDisplay = [];
 
-        .code-container {
-            display: flex;
-            justify-content: space-between;
-            padding: 30px;
-        }
+      function pushFinal(rawLine, isAdded = false) {
+        finalTransformed.push(rawLine);
+        finalDisplay.push(isAdded ? `<span class="added-content">${esc(rawLine)}</span>` : esc(rawLine));
+      }
 
-        .code-box {
-            width: 48%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            background-color: #f9f9f9;
-        }
+      for (let i = 0; i < transformed.length; i++) {
+        let line = transformed[i];
+        let dline = display[i];
 
-        .added-content {
-            color: red;
-            white-space: pre-wrap; /* 保持換行 */
-        }
-    </style>
-    <script>
-        function transformAndDownload() {
-            const fileInput = document.getElementById('fileInput');
-            const originalCodeContainer = document.getElementById('originalCode');
-            const transformedCodeContainer = document.getElementById('transformedCode');
+        if (isTradeCallLine(line)) {
+          // 找上一個「非空白行」判斷是否已經有 seqNum += 1
+          let j = finalTransformed.length - 1;
+          while (j >= 0 && finalTransformed[j].trim() === '') j--;
+          const prev = j >= 0 ? finalTransformed[j].trim() : '';
 
-            originalCodeContainer.textContent = '';
-            transformedCodeContainer.innerHTML = '';
+          const indentation = (line.match(/^(\s*)/) || ['',''])[1];
 
-            if (fileInput.files.length === 0) {
-                alert('請選擇一個文件進行轉換。');
-                return;
+          if (prev !== 'seqNum += 1') {
+            pushFinal(`${indentation}seqNum += 1`, true);
+          }
+
+          // 補 alert_message（只針對同一行呼叫）
+          if (!/alert_message\s*=/.test(line)) {
+            const idx = line.lastIndexOf(')');
+            if (idx !== -1) {
+              const before = line.slice(0, idx);
+              const after = line.slice(idx);
+              const added = `, alert_message=addArrayData(seqNum)`;
+              const newLine = before + added + after;
+
+              const html = esc(before) + `<span class="added-content">${esc(added)}</span>` + esc(after);
+              pushFinal(newLine, false);
+              finalDisplay[finalDisplay.length - 1] = html;
+              continue;
             }
-
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-
-            reader.onload = function(e) {
-                try {
-                    const originalText = e.target.result;
-                    originalCodeContainer.textContent = originalText;
-
-                    const [transformedData, displayData] = transformPineScript(originalText);
-                    transformedCodeContainer.innerHTML = displayData;
-
-                    // 創建一個新的 Blob 包含轉換後的文本
-                    const blob = new Blob([transformedData], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-
-                    // 程式化創建一個下載鏈接並點擊它
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = url;
-                    // 使用原始文件名，添加 'transformedPineScript' 前缀
-                    const originalFileName = file.name;
-                    const newFileName = 'transformed_' + originalFileName;
-                    downloadLink.download = newFileName;  // 设置新的文件名为下载名称
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                } catch (error) {
-                    alert('轉換過程中發生錯誤：' + error.message);
-                }
-            };
-
-            reader.readAsText(file);
+          }
         }
 
-        function escapeHtml(unsafe) {
-            return unsafe
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
+        pushFinal(line, false);
+        finalDisplay[finalDisplay.length - 1] = dline;
+      }
 
-        function transformPineScript(data) {
-            const initialization = "\nvar seqNum = 0 // Initialize the sequence number\n" +
-                           "addArrayData(value) => \n" +
-                           "    alert_array = array.new_string()\n" +
-                           "    array.push(alert_array, '\"seqNum\": ' + str.tostring(value))\n" +
-                           "    alertstring = '{' + array.join(alert_array, ', ') + '}'\n";
-
-            let displayData = escapeHtml(data); // 用于显示的带有 <span> 标签的版本
-            let transformedData = data; // 用于下载的纯文本版本
-
-            // 正则表达式匹配 strategy 函数及其后的代码块，直到文件末尾
-            const regexPattern = /(@version=\d+\s*\nstrategy\("([^"]*)"[^\n]*\)[\s\S]*)/;
-
-            transformedData = transformedData.replace(regexPattern, (match) => {
-                // 检查匹配的策略块是否已包含初始化代码
-                if (!match.includes('var seqNum = 0 // Initialize the sequence number')) {
-                    // 找到策略声明后第一行适当位置插入初始化代码
-                    const endOfStrategyDeclaration = match.indexOf(')', match.indexOf('strategy(')) + 1;
-                    const partBeforeInitialization = match.substring(0, endOfStrategyDeclaration);
-                    const partAfterInitialization = match.substring(endOfStrategyDeclaration);
-
-                    // 替换显示用的版本
-                    displayData = displayData.replace(escapeHtml(match), escapeHtml(partBeforeInitialization) + '<span class="added-content">' + escapeHtml(initialization) + '</span>' + escapeHtml(partAfterInitialization));
-                    // 替换下载用的版本
-                    return partBeforeInitialization + initialization + partAfterInitialization;
-                }
-                return match; // 如果已包含，不做更改
-            });
-
-            const regexPattern1 = /( *)(strategy\.(entry|close|exit)\("([^"]+)", [^\n]+)\n/g;
-            transformedData = transformedData.replace(regexPattern1, (match, indentation, strategyCall) => {
-                // 获取当前匹配前的所有文本并拆分成行
-                const lines = transformedData.substring(0, transformedData.indexOf(match)).split('\n');
-                const lastLine = lines[lines.length - 2].trim();  // 获取最后一行前一行
-
-                // 检查前一行是否已经是 'seqNum += 1'
-                if (lastLine === "seqNum += 1") {
-                    return match;  // 如果已经添加了 'seqNum += 1'，直接返回原匹配内容
-                }
-
-                // 替换显示用的版本
-                displayData = displayData.replace(escapeHtml(match), `${escapeHtml(indentation)}<span class="added-content">seqNum += 1\n</span>${escapeHtml(match)}`);
-                // 替换下载用的版本
-                return `${indentation}seqNum += 1\n${match}`; // 否则，添加 'seqNum += 1' 并保持原有缩进
-            });
-
-            // Now check and add alert message if not present
-            const regexPattern2 = /strategy\.(entry|close|exit)\("([^"]+)", ([^\)]*?\([^)]*\)[^\)]*?|[^\)]+)\)/g;
-            transformedData = transformedData.replace(regexPattern2, (match, method, label, params) => {
-                console.log('params', params);
-                // 檢查 params 中是否已經包含 alert_message
-                if (!params.includes('alert_message=addArrayData')) {
-                    // 替換顯示用的版本
-                    displayData = displayData.replace(escapeHtml(match), `strategy.${method}("${escapeHtml(label)}", ${escapeHtml(params)}<span class="added-content">, alert_message=addArrayData(seqNum)</span>)`);
-                    // 替換下載用的版本
-                    return `strategy.${method}("${label}", ${params}, alert_message=addArrayData(seqNum))`;
-                }
-                return match;
-            });
-
-
-
-            return [transformedData, displayData];
-        }
-    </script>
+      return [finalTransformed.join(NL), finalDisplay.join('\n')];
+    }
+  </script>
 </head>
+
 <body>
-    <div class="container">
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
         <h1>TradingView Pine Script 轉換器</h1>
-        <div>
-            操作說明:
-            <br>
-            請按「選擇文件」上傳 TradingView Pine Script 程式碼檔案(只支援 TXT 檔)，
-            <br>
-            程式自動補上需要的程式碼，
-            <br>
-            會下載成 transformed_xxxxx.txt 文件，
-            <br>
-            並在下方顯示調整前後的程式碼。
+        <div class="sub">
+          上傳 Pine Script <code class="k">.txt</code> → 自動補上 <code class="k">seqNum</code> 與 <code class="k">alert_message</code> → 立即下載轉換檔，並顯示差異（紅字為新增）。
         </div>
-        <h4>ver: 24.06.13.01</h4>
-        <div class="file-input-container">
-            <button class="custom-button" onclick="document.getElementById('fileInput').click()">選擇文件</button>
-            <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="transformAndDownload()">
-        </div>
+      </div>
+      <div class="badge"><span class="dot"></span> ver: 25.12.19.02</div>
     </div>
-    <div class="code-container">
-        <div class="code-box">
-            <h3>原始策略程式碼</h3>
-            <pre id="originalCode"></pre>
+
+    <div class="grid">
+      <!-- 操作區 -->
+      <div class="card">
+        <div class="card-h">
+          <h3>操作</h3>
+          <div class="status">檔名：<strong id="fileName">尚未選擇檔案</strong></div>
         </div>
-        <div class="code-box">
-            <h3>調整後策略程式碼</h3>
-            <pre id="transformedCode"></pre>
+        <div class="card-b">
+          <div class="controls">
+            <button class="btn primary" onclick="pickFile()">選擇文件</button>
+            <button class="btn ghost" onclick="clearAll()">清空</button>
+            <input type="file" id="fileInput" class="file" accept=".txt" onchange="transformAndDownload()">
+            <div class="status" id="resultHint">等待檔案…</div>
+          </div>
         </div>
+      </div>
+
+      <!-- Alert JSON 區 -->
+      <div class="card">
+        <div class="card-h">
+          <h3>TradingView 快訊內容（可直接複製）</h3>
+          <div class="mini-actions">
+            <button class="btn mini" onclick="copyFromPre('alertJson')">複製 JSON</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <pre id="alertJson">{
+  "info": "{{strategy.order.alert_message}}",
+  "deal_price": "{{strategy.order.price}}",
+  "position_size": "{{strategy.position_size}}"
+}</pre>
+          <div class="status" style="margin-top:8px;">
+            建議：在 TradingView 建立 Alert 時，將 <strong>Message</strong> 貼上此 JSON。
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- 程式碼區 -->
+    <div class="code-grid">
+      <div class="card">
+        <div class="card-h">
+          <h3>原始策略程式碼</h3>
+          <div class="mini-actions">
+            <button class="btn mini" onclick="copyFromPre('originalCode')">複製</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <pre id="originalCode"></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h3>調整後策略程式碼</h3>
+          <div class="mini-actions">
+            <button class="btn mini" onclick="copyText(document.getElementById('transformedCode').innerText)">複製</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <pre id="transformedCode"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">已複製到剪貼簿</div>
 </body>
 </html>
