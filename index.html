@@ -413,7 +413,7 @@
           上傳 Pine Script <code class="k">.txt</code> → 自動補上 <code class="k">seqNum</code> 與 <code class="k">alert_message</code> → 立即下載轉換檔，並顯示差異（紅字為新增）。
         </div>
       </div>
-      <div class="badge"><span class="dot"></span> ver: 25.12.19.02</div>
+      <div class="badge"><span class="dot"></span> ver: 25.12.19.01</div>
     </div>
 
     <div class="grid">
@@ -443,9 +443,9 @@
         </div>
         <div class="card-b">
           <pre id="alertJson">{
-  "info": "{{strategy.order.alert_message}}",
-  "deal_price": "{{strategy.order.price}}",
-  "position_size": "{{strategy.position_size}}"
+  "info": {{strategy.order.alert_message}},
+  "deal_price": {{strategy.order.price}},
+  "position_size": {{strategy.position_size}}
 }</pre>
           <div class="status" style="margin-top:8px;">
             建議：在 TradingView 建立 Alert 時，將 <strong>Message</strong> 貼上此 JSON。
